@@ -1,0 +1,90 @@
+
+###########################
+# Prepare environment
+###########################
+
+setwd("../")
+
+source("0_auxilary/packages.R")
+source("0_auxilary/functions.R")
+
+setwd("4_state-leads")
+
+###########################
+# Input data
+###########################
+
+# clean state election results
+# clean state polls
+
+###########################
+# Output data
+###########################
+
+# days, weeks, and months poll leads
+
+
+# Load data for election results
+state_results <- read.csv("../1_state-elections/output/state-election-results.csv")
+
+# Load data for state polls
+state_polls <- read.csv("../3_state-polls/output/state-polls.csv")
+
+
+###########################
+# Transformations
+###########################
+
+
+# Make df to calculate leads
+state_leads <- state_results %>% select(c(land, party, electiondate, electiondate_l1, vote_share, vote_share_l1)) %>% unique
+state_leads$party %>% table
+
+# Make dates
+state_leads$electiondate <- ymd(state_leads$electiondate)
+state_leads$electiondate_l1 <- ymd(state_leads$electiondate_l1)
+state_polls$date <- ymd(state_polls$date)
+
+# Add cutoff days for leads
+state_leads$date_days <- state_leads$electiondate - days(2)
+state_leads$date_weeks <- state_leads$electiondate - weeks(2)
+state_leads$date_months <- state_leads$electiondate - months(2)
+
+# Correct NAs in months lead date
+state_leads$date_months[is.na(state_leads$date_months)] <- state_leads$electiondate[is.na(state_leads$date_months)] - weeks(8)
+
+# Only keep days in leads where we have polls
+state_leads <- filter(state_leads, date_months >= min(state_polls$date, na.rm = T))
+
+# Add columns for polls
+state_leads$polls_days <- NA
+state_leads$polls_weeks <- NA
+state_leads$polls_months <- NA
+state_leads$calculated <- F
+
+# state_polls$date <- as.numeric(state_polls$date)
+
+# Calculate leads using get_latent_support_land function
+for (i in 1:nrow(state_leads)) {
+  if(state_leads$calculated[i]) next
+  print(i)
+  state_leads$polls_days[i] <- get_latent_support_land(state_polls, state_leads$party[i], state_leads$land[i], state_leads$date_days[i], state_leads$electiondate_l1[i], "party", "date", "poll_share", "land")
+  state_leads$polls_weeks[i] <- get_latent_support_land(state_polls, state_leads$party[i], state_leads$land[i], state_leads$date_weeks[i], state_leads$electiondate_l1[i], "party", "date", "poll_share", "land")
+  state_leads$polls_months[i] <- get_latent_support_land(state_polls, state_leads$party[i], state_leads$land[i], state_leads$date_months[i], state_leads$electiondate_l1[i], "party", "date", "poll_share", "land")
+  state_leads$calculated[i] <- T
+}
+
+
+# Check consistency
+state_leads$polls_days %>% summary
+state_leads$polls_weeks %>% summary
+state_leads$polls_months %>% summary
+
+state_leads$land %>% table
+state_leads$land %>% unique %>% length
+state_leads$party %>% table
+
+# Write data to output
+write.csv(state_leads, "output/state-leads.csv", row.names = FALSE)
+
+# 1992-04-05

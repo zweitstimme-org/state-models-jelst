@@ -1,0 +1,573 @@
+
+###########################
+# Prepare environment
+###########################
+
+setwd("../")
+
+source("0_auxilary/packages.R")
+source("0_auxilary/functions.R")
+
+setwd("9_full-data")
+
+###########################
+# Input data
+###########################
+
+# cabinet data
+# state leads
+# federal leads
+
+
+###########################
+# Output data
+###########################
+
+
+# full data set for modeling: full_data
+# vars: state, elec_ind, year, electiondate, party, voteshare,
+# voteshare_l1, pm, gov, polls_days, polls_weeks, polls_months, pollsNA_days, 
+# pollsNA_weeks, pollsNA_months, pollsNAall_days, pollsNAall_weeks,
+# pollsNAall_months, fed_trend_days, fed_trend_weeks, fed_trend_months, 
+# fed_trendNA_days, fed_trendNA_weeks, fed_trendNA_months, fed_trendNAall_days,
+# fed_trendNAall_weeks, fed_trendNAall_months, new_party
+
+
+
+# and: 00_datPrep_datastructural.RData
+# vars: state, elec_ind, year, electiondate, party, voteshare, voteshare_l1, 
+# pm, gov, polls_days, polls_weeks, polls_months, pollsNA_days, pollsNA_weeks, 
+# pollsNA_months, pollsNAall_days, pollsNAall_weeks, pollsNAall_months, 
+# fed_trend_days, fed_trend_weeks, fed_trend_months, fed_trendNA_days, 
+# fed_trendNA_weeks, fed_trendNA_months, fed_trendNAall_days, fed_trendNAall_weeks, 
+# fed_trendNAall_months, new_party, pmXgov, voteshare_l1Xnew, polls_daysXNA, 
+# polls_weeksXNA, polls_monthsXNA, fed_trend_daysXNA, fed_trend_weeksXNA, 
+# fed_trend_monthsXNA, election_type
+
+
+
+# Load data for polls (includes election data)
+federal_leads <- read.csv("../7_federal-leads/output/federal-leads.csv")
+
+state_leads <- read.csv("../4_state-leads/output/state-leads.csv") %>% select(-c(vote_share, vote_share_l1))
+
+cabinets <- read.csv("../2_state-cabinets/output/state-cabinets.csv")
+
+state_results <- read.csv("../1_state-elections/output/state-election-results.csv") %>% 
+  filter(electiondate < ymd("2024-09-01"))
+
+###########################
+# Transformations
+###########################
+
+
+# Merge cabinet data and state elections results
+
+cabinets$year_next_election
+
+# Add var for merging
+state_results$year_next_election <- substr(state_results$electiondate, 1, 4) %>% as.numeric
+
+full_data <- state_results %>%
+  select(land, year_next_election, party, vote_share, vote_share_l1, electiondate, on_ballot) %>%
+  left_join(cabinets, by = c("land", "year_next_election", "party"), suffix = c(".election", ".coalition"))  # Inner join mit coalition_final
+
+
+# Fill values with values from same term ("pm_name", "pm_party", "cabinet_name", "year_start", "year_end")
+# Parties that are not in the cabinet data (npd, afd, pir, etc.), but in the elections data have missings there, but they are never in the cabinet (?)
+for (election in unique(full_data$electiondate)) {
+  for(land in unique(full_data$land)) {
+    for (var in c("pm_name", "pm_party", "cabinet_name", "year_start", "year_end")) {
+      filler <- unique(full_data[full_data$electiondate == election & full_data$land == land, var])
+      if(length(filler[!is.na(filler)]) > 0) full_data[full_data$electiondate == election  & full_data$land == land, var] <- filler[!is.na(filler)]
+    }
+  }
+}
+
+# Fill some missings
+full_data$cabinet_party[!is.na(full_data$vote_share) & is.na(full_data$cabinet_party) & !is.na(full_data$year_end)] <- 0
+full_data$is_pm_party[!is.na(full_data$vote_share) & is.na(full_data$is_pm_party) & !is.na(full_data$pm_party)] <- 0
+
+# Add state polling leads
+full_data <- merge(full_data, select(state_leads, -c(electiondate_l1)), by = c("party", "land", "electiondate"), all.x = T) #  %>% select(-c(btw_trend_months, btw_trend_weeks, btw_trend_days))
+
+# Add federal polling trends
+full_data <- merge(full_data, select(federal_leads, c(electiondate, land, party, 
+                                                      fed_polls_months, fed_polls_weeks, fed_polls_days,
+                                                      fed_vote_share
+                                                      )), 
+                       by = c("party", "land", "electiondate"), all.x = T) #  %>% select(-c(btw_trend_months, btw_trend_weeks, btw_trend_days))
+
+# Add popularity (todo)
+
+full_data %>% 
+# Only elections since 1990
+filter(substr(electiondate, 1, 4) > 1990) %>%
+  
+  # Only include elections with vote share 
+  filter(!(is.na(vote_share))) %>%
+  
+  # Only relevant parties
+  filter(party %in%  c("cdu","spd","fdp","gru", "lin", "afd")) -> full_data
+
+
+
+
+
+####################################
+# SONSTIGE VOTE SHARE
+####################################
+
+# Calculate vote_share, vote_share_l1 for sonstige
+# Calculate oth as an additional row per election
+
+full_data$party %>% table
+
+for (land in unique(full_data$land)) {
+  print(land)
+  for (electiondate in unique(full_data$electiondate[full_data$land == land])) {
+    print(as.Date(electiondate))
+    full_data <- data.frame(land = land,
+                            electiondate = electiondate,
+                            year_start = unique(full_data$year_start[full_data$land == land & full_data$electiondate == as.Date(electiondate) & !is.na(full_data$year_start)]),
+                            year_end = unique(full_data$year_end[full_data$land == land & full_data$electiondate == as.Date(electiondate) & !is.na(full_data$year_end)]),
+                            year_next_election = unique(full_data$year_next_election[full_data$land == land & full_data$electiondate == as.Date(electiondate) & !is.na(full_data$year_next_election)]),
+                            on_ballot = 1,
+                            pm_name = unique(full_data$pm_name[full_data$land == land & full_data$electiondate == electiondate & !is.na(full_data$pm_name)]),
+                            pm_party = unique(full_data$pm_party[full_data$land == land & full_data$electiondate == electiondate & !is.na(full_data$pm_party)]),
+                            cabinet_name = unique(full_data$cabinet_name[full_data$land == land & full_data$electiondate == electiondate & !is.na(full_data$cabinet_name)]),
+                            cabinet_party = 0,
+                            is_pm_party = 0,
+                            party = "oth",
+                            vote_share = 100 - sum(full_data$vote_share[full_data$land == land & full_data$electiondate == electiondate], na.rm = TRUE),
+                            vote_share_l1 = 100 - sum(full_data$vote_share_l1[full_data$land == land & full_data$electiondate == electiondate], na.rm = TRUE)) %>%
+      bind_rows(full_data)
+
+  }
+}
+
+
+
+# Calculate shares for sonstige
+full_data <- full_data %>%
+  
+  # Subset to main parties and calculate share
+  filter(party != "oth") %>% 
+  group_by(land, electiondate) %>%
+  dplyr::summarise(
+    total_other_shares = sum(vote_share, na.rm = TRUE),
+    total_other_shareslag = sum(vote_share_l1, na.rm = TRUE),
+    total_other_fed_shares = sum(fed_vote_share, na.rm = TRUE)
+  ) %>% 
+
+
+# Join back to 
+left_join(full_data,.,by = join_by(land, electiondate))  %>%
+  
+  # Mutate share of others
+  mutate(vote_share = case_when(party == "oth" ~ 100 - total_other_shares,
+                           TRUE ~ vote_share),
+         vote_share_l1 = case_when(party == "oth" ~ 100 - total_other_shareslag,
+                              TRUE ~ vote_share_l1),
+         fed_vote_share = case_when(party == "oth" ~ 100 - total_other_fed_shares,
+                              TRUE ~ fed_vote_share)
+         ) %>%
+  dplyr::select(-total_other_shares,-total_other_shareslag) %>% 
+  
+  ungroup()
+
+
+
+
+
+
+####################################
+# POLLING
+####################################
+
+# Polls data
+full_data <-  full_data %>% 
+  
+  # See if poll, fed_poll, fed_vote data is missing
+  mutate(polls_days_missing = case_when(is.na(polls_days) ~ 1, TRUE ~ 0),
+         polls_weeks_missing = case_when(is.na(polls_weeks) ~ 1, TRUE ~ 0),
+         polls_months_missing = case_when(is.na(polls_months) ~ 1, TRUE ~ 0),
+         
+         fed_polls_days_missing = case_when(is.na(fed_polls_days) ~ 1, TRUE ~ 0),
+         fed_polls_weeks_missing = case_when(is.na(fed_polls_weeks) ~ 1, TRUE ~ 0),
+         fed_polls_months_missing = case_when(is.na(fed_polls_months) ~ 1, TRUE ~ 0),
+         
+         fed_vote_share_missing = case_when(is.na(fed_vote_share) ~ 1, TRUE ~ 0)
+         
+         
+         ) %>%
+  
+  # Replace with zero if polls data is missing
+  mutate(polls_days = case_when(is.na(polls_days) ~ 0, TRUE ~ polls_days),
+         polls_weeks = case_when(is.na(polls_weeks) ~ 0, TRUE ~ polls_weeks),
+         polls_months= case_when(is.na(polls_months) ~ 0, TRUE ~ polls_months),
+         
+         fed_polls_days = case_when(is.na(fed_polls_days) ~ 0, TRUE ~ fed_polls_days),
+         fed_polls_weeks = case_when(is.na(fed_polls_weeks) ~ 0, TRUE ~ fed_polls_weeks),
+         fed_polls_months = case_when(is.na(fed_polls_months) ~ 0, TRUE ~ fed_polls_months),
+         
+         fed_vote_share = case_when(is.na(fed_vote_share) ~ 0, TRUE ~ fed_vote_share)
+         
+         )
+
+
+
+####################################
+# Polls for Others
+####################################
+full_data <- full_data %>% 
+  
+  # Subset data to calculate poll share of others
+  filter(party != "oth") %>% 
+  group_by(land, electiondate) %>%
+  dplyr::summarise(
+    # Are all non-oth parties missing?
+    polls_days_missingall = case_when(all(polls_days_missing==1) ~ 1, TRUE ~ 0),
+    polls_weeks_missingall = case_when(all(polls_weeks_missing==1) ~ 1, TRUE ~ 0),
+    polls_months_missingall = case_when(all(polls_months_missing==1) ~ 1, TRUE ~ 0),
+    
+    fed_polls_days_missingall = case_when(all(fed_polls_days_missing==1) ~ 1, TRUE ~ 0),
+    fed_polls_weeks_missingall = case_when(all(fed_polls_weeks_missing==1) ~ 1, TRUE ~ 0),
+    fed_polls_months_missingall = case_when(all(fed_polls_months_missing==1) ~ 1, TRUE ~ 0),
+    
+    fed_vote_share_missingall = case_when(all(fed_vote_share_missing==1) ~ 1, TRUE ~ 0),
+    
+    # Total vote share of all non-oth parties
+    total_polls_days = sum(polls_days, na.rm = TRUE),
+    total_polls_weeks = sum(polls_weeks, na.rm = TRUE),
+    total_polls_months = sum(polls_months, na.rm = TRUE),
+    
+    total_fed_polls_days = sum(fed_polls_days, na.rm = TRUE),
+    total_fed_polls_weeks = sum(fed_polls_weeks, na.rm = TRUE),
+    total_fed_polls_months = sum(fed_polls_months, na.rm = TRUE),
+    
+    total_fed_vote_share = sum(fed_vote_share, na.rm = TRUE)
+  )  %>% 
+  
+  # Join with original data
+  left_join(full_data,.) %>%
+  
+  # Mutate Share of Other Party and set to zero if all missing
+  # For oth parties, set to 100 - total share of all other parties, unless all missing
+  mutate(polls_days = case_when(party == "oth" & polls_days_missingall==0 ~ 100 - total_polls_days,
+                                      party == "oth" & polls_days_missingall== 1 ~ 0,
+                                      TRUE ~ polls_days),
+         polls_weeks = case_when(party == "oth" & polls_weeks_missingall==0 ~ 100 - total_polls_weeks,
+                                       party == "oth" & polls_weeks_missingall== 1 ~ 0,
+                                       TRUE ~ polls_weeks),
+         polls_months = case_when(party == "oth" & polls_months_missingall==0 ~ 100 - total_polls_months,
+                                        party == "oth" & polls_months_missingall== 1 ~ 0,
+                                        TRUE ~ polls_months),
+         
+         fed_polls_days = case_when(party == "oth" & fed_polls_days_missingall==0 ~ 100 - total_fed_polls_days,
+                                       party == "oth" & fed_polls_days_missingall== 1 ~ 0,
+                                       TRUE ~ fed_polls_days),
+         fed_polls_weeks = case_when(party == "oth" & fed_polls_weeks_missingall==0 ~ 100 - total_fed_polls_weeks,
+                                        party == "oth" & fed_polls_weeks_missingall== 1 ~ 0,
+                                        TRUE ~ fed_polls_weeks),
+         fed_polls_months = case_when(party == "oth" & fed_polls_months_missingall==0 ~ 100 - total_fed_polls_months,
+                                         party == "oth" & fed_polls_months_missingall== 1 ~ 0,
+                                         TRUE ~ fed_polls_months),
+         
+         fed_vote_share = case_when(party == "oth" & fed_vote_share_missingall==0 ~ 100 - total_fed_vote_share,
+                                       party == "oth" & fed_vote_share_missingall== 1 ~ 0,
+                                       TRUE ~ fed_vote_share)
+    
+         
+  ) %>% 
+  
+  # Adapt missingness for oth (if polls_days is 0, then the var is missing)
+  mutate(polls_days_missing = case_when(party == "oth" & (polls_days==0) ~ 1, 
+                                              party == "oth" & (polls_days!=0) ~ 0,
+                                              TRUE ~ polls_days_missing),
+         polls_weeks_missing = case_when(party == "oth" & (polls_weeks==0) ~ 1, 
+                                               party == "oth" & (polls_weeks!=0) ~ 0,
+                                               TRUE ~ polls_weeks_missing),
+         polls_months_missing = case_when(party == "oth" & (polls_months==0) ~ 1, 
+                                                party == "oth" & (polls_months!=0) ~ 0,
+                                                TRUE ~ polls_months_missing),
+         
+         fed_polls_days_missing = case_when(party == "oth" & (fed_polls_days==0) ~ 1,
+                                                party == "oth" & (fed_polls_days!=0) ~ 0,
+                                                TRUE ~ fed_polls_days_missing),
+         fed_polls_weeks_missing = case_when(party == "oth" & (fed_polls_weeks==0) ~ 1,
+                                                 party == "oth" & (fed_polls_weeks!=0) ~ 0,
+                                                 TRUE ~ fed_polls_weeks_missing),
+         fed_polls_months_missing = case_when(party == "oth" & (fed_polls_months==0) ~ 1,
+                                                  party == "oth" & (fed_polls_months!=0) ~ 0,
+                                                  TRUE ~ fed_polls_months_missing),
+         fed_vote_share_missing = case_when(party == "oth" & (fed_vote_share==0) ~ 1,
+                                                party == "oth" & (fed_vote_share!=0) ~ 0,
+                                                TRUE ~ fed_vote_share_missing)
+
+         )
+
+
+####################################
+# Calculate Log Ratio
+####################################
+# log(Poll BTW/(1-Poll BTW) - log(letzte BTW/(1-letzte BTW)).
+
+
+full_data <- full_data %>% mutate(fed_trends_lr_days = log(case_when(fed_polls_weeks == 0 ~ 0.000001, TRUE ~ fed_polls_weeks)/(100 - case_when(fed_polls_weeks == 0 ~ 0.000001, TRUE ~ fed_polls_weeks))) - log(case_when(fed_vote_share == 0 ~ 0.000001, TRUE ~ fed_vote_share) / (100 - case_when(fed_vote_share == 0 ~ 0.000001, TRUE ~ fed_vote_share) )),
+                                  fed_trends_lr_weeks = log(case_when(fed_polls_weeks == 0 ~ 0.000001, TRUE ~ fed_polls_weeks)/(100 - case_when(fed_polls_weeks == 0 ~ 0.000001, TRUE ~ fed_polls_weeks))) - log(case_when(fed_vote_share == 0 ~ 0.000001, TRUE ~ fed_vote_share) / (100 - case_when(fed_vote_share == 0 ~ 0.000001, TRUE ~ fed_vote_share) )),
+                                  fed_trends_lr_months = log(case_when(fed_polls_weeks == 0 ~ 0.000001, TRUE ~ fed_polls_weeks)/(100 - case_when(fed_polls_weeks == 0 ~ 0.000001, TRUE ~ fed_polls_weeks))) - log(case_when(fed_vote_share == 0 ~ 0.000001, TRUE ~ fed_vote_share) / (100 - case_when(fed_vote_share == 0 ~ 0.000001, TRUE ~ fed_vote_share) )),
+                                  
+                                  fed_trend_lr_days_missing = as.numeric(fed_polls_days_missing | fed_vote_share_missing),
+                                  fed_trend_lr_weeks_missing = as.numeric(fed_polls_weeks_missing | fed_vote_share_missing),
+                                  fed_trend_lr_months_missing = as.numeric(fed_polls_months_missing | fed_vote_share_missing)
+                                  
+                                  ) 
+full_data <- full_data %>% 
+  group_by(land, electiondate) %>%
+  dplyr::summarise(
+    # Are all non-oth parties missing?
+    fed_trend_lr_days_missingall = case_when(all(fed_trend_lr_days_missing==1) ~ 1, TRUE ~ 0),
+    fed_trend_lr_weeks_missingall = case_when(all(fed_trend_lr_weeks_missing==1) ~ 1, TRUE ~ 0),
+    fed_trend_lr_months_missingall = case_when(all(fed_trend_lr_months_missing==1) ~ 1, TRUE ~ 0)
+    
+  ) %>% 
+  # Join with original data
+  left_join(full_data,.)
+                                  
+
+
+
+####################################
+# Add federal trends
+####################################
+
+full_data$fed_vote_share_missing %>% table # trend is missing when fed_vote_share or fed_polls missing
+
+full_data$fed_polls_days_missing %>% table
+
+full_data <- full_data %>% mutate(fed_trend_days = fed_polls_days - fed_vote_share,
+                                  fed_trend_weeks = fed_polls_weeks - fed_vote_share,
+                                  fed_trend_months = fed_polls_months - fed_vote_share,
+                                  
+                                  fed_trend_days_missing = as.numeric(fed_polls_days_missing | fed_vote_share_missing),
+                                  fed_trend_weeks_missing = as.numeric(fed_polls_weeks_missing | fed_vote_share_missing),
+                                  fed_trend_months_missing = as.numeric(fed_polls_months_missing | fed_vote_share_missing)
+                                  ) 
+
+full_data <- full_data %>% 
+  group_by(land, electiondate) %>%
+  dplyr::summarise(
+    # Are all non-oth parties missing?
+    fed_trend_days_missingall = case_when(all(fed_trend_days_missing==1) ~ 1, TRUE ~ 0),
+    fed_trend_weeks_missingall = case_when(all(fed_trend_weeks_missing==1) ~ 1, TRUE ~ 0),
+    fed_trend_months_missingall = case_when(all(fed_trend_months_missing==1) ~ 1, TRUE ~ 0)
+  ) %>% 
+  # Join with original data
+  left_join(full_data,.)
+
+
+# Sort data
+full_data <- arrange(full_data, land, electiondate, party)
+
+
+
+
+
+# Select relevant variables
+full_data <- full_data %>% 
+  
+  # Create Election iD
+  mutate(elec_ind = paste(land, electiondate, sep="_")) %>%
+  
+  # Select relevant variables
+  dplyr::select("state" = land, 
+                elec_ind,
+                "year" = year_start, 
+                electiondate, party,
+                
+                # state vote share
+                "voteshare" = vote_share,
+                "voteshare_l1" = vote_share_l1,"pm"= is_pm_party, "gov" = cabinet_party,
+                
+                # state polls
+                "polls_days" = "polls_days", 
+                "polls_weeks" = "polls_weeks",
+                "polls_months" =  "polls_months",
+                
+                "pollsNA_days" = "polls_days_missing", 
+                "pollsNA_weeks" = "polls_weeks_missing",
+                "pollsNA_months" =  "polls_months_missingall",
+                
+                "pollsNAall_days" = "polls_days_missingall", 
+                "pollsNAall_weeks" = "polls_weeks_missingall",
+                "pollsNAall_months" =  "polls_months_missingall",
+                
+                # federal polls
+                "fed_polls_days" = "fed_polls_days",
+                "fed_polls_weeks" = "fed_polls_weeks",
+                "fed_polls_months" = "fed_polls_months",
+                
+                "fed_pollsNA_days" = "fed_polls_days_missing",
+                "fed_pollsNA_weeks" = "fed_polls_weeks_missing",
+                "fed_pollsNA_months" = "fed_polls_months_missing",
+                
+                "fed_pollsNAall_days" = "fed_polls_days_missingall",
+                "fed_pollsNAall_weeks" = "fed_polls_weeks_missingall",
+                "fed_pollsNAall_months" = "fed_polls_months_missingall",
+                
+                # federal vote share
+                "fed_vote_share" = "fed_vote_share",
+                "fed_vote_share_missing" = "fed_vote_share_missing",
+                "fed_vote_share_missingall" = "fed_vote_share_missingall",
+                
+                # federal trends
+                "fed_trend_days" = "fed_trend_days",
+                "fed_trend_weeks" = "fed_trend_weeks",
+                "fed_trend_months" = "fed_trend_months",
+                
+                "fed_trend_days_missing" = "fed_trend_days_missing",
+                "fed_trend_weeks_missing" = "fed_trend_weeks_missing",
+                "fed_trend_months_missing" = "fed_trend_months_missing",
+                
+                "fed_trend_days_missingall" = "fed_trend_days_missingall",
+                "fed_trend_weeks_missingall" = "fed_trend_weeks_missingall",
+                "fed_trend_months_missingall" = "fed_trend_months_missingall",
+                
+                # federal trends logratio
+                "fed_trends_lr_days" = "fed_trends_lr_days",
+                "fed_trends_lr_weeks" = "fed_trends_lr_weeks",
+                "fed_trends_lr_months" = "fed_trends_lr_months",
+                
+                "fed_trend_lr_days_missing" = "fed_trend_lr_days_missing",
+                "fed_trend_lr_weeks_missing" = "fed_trend_lr_weeks_missing",
+                "fed_trend_lr_months_missing" = "fed_trend_lr_months_missing",
+                
+                "fed_trend_lr_days_missingall" = "fed_trend_lr_days_missingall",
+                "fed_trend_lr_weeks_missingall" = "fed_trend_lr_weeks_missingall",
+                "fed_trend_lr_months_missingall" = "fed_trend_lr_months_missingall"
+                
+                ) %>%
+              
+  
+  # Create variable new party, and set prime minister and last voteshare to zero
+  mutate(new_party = case_when(is.na(voteshare_l1) ~ 1,
+                               TRUE ~ 0),
+         voteshare_l1 = case_when(is.na(voteshare_l1) ~ 0,
+                                  TRUE ~ voteshare_l1),
+         pm  = case_when(is.na(pm) ~ 0,
+                         TRUE ~ pm)) %>%
+  
+  # Replace voteshare_l1 to zero in case it is falesly set to 100
+  mutate(voteshare_l1 = case_when(voteshare_l1 == 100 & party == "oth" ~ 0, TRUE ~  voteshare_l1)) 
+
+
+
+# Check consistency
+(full_data %>% filter(party == "oth"))$land %>% unique %>% length
+(full_data %>% filter(party == "oth"))$land %>% table
+(full_data %>% filter(party == "oth"))$electiondate %>% substr(1,4) %>% table
+
+# Should check more
+
+####################################
+# Create Predictors
+####################################
+
+
+# Function fo log-ration with correction if value ß
+log_ratio <- function(x,corre_fct = 0.01){
+  x[x < 0] <- 0
+  x[x == 0] <- x[x == 0] + corre_fct 
+  return(log(x / (1 - x)))
+}        
+
+
+
+full_data  <- full_data %>%
+  
+  # Create Predictors and Interaction effects  
+  mutate("pmXgov" = pm * gov,
+         
+         "voteshare" = voteshare/100,
+         "voteshare_l1" = voteshare_l1/100,
+         
+         "polls_days" = polls_days/100,
+         "polls_weeks" = polls_weeks/100,
+         "polls_months" = polls_months/100,
+         
+         "fed_polls_days" = fed_polls_days/100,
+         "fed_polls_weeks" = fed_polls_weeks/100,
+         "fed_polls_months" = fed_polls_months/100,
+         
+         "fed_vote_share" = fed_vote_share/100,
+         
+         "fed_trend_days" = fed_trend_days/100,
+         "fed_trend_weeks" = fed_trend_weeks/100,
+         "fed_trend_months" = fed_trend_months/100,
+         
+         ) %>% 
+  
+  mutate("election_type" = "past",
+         
+         voteshare_l1 = round(voteshare_l1,3),
+         
+         polls_weeks = round(polls_weeks,3),
+         polls_days = round(polls_days,3),
+         polls_months = round(polls_months,3),
+         
+         fed_polls_days = round(fed_polls_days,3),
+         fed_polls_weeks = round(fed_polls_weeks,3),
+         fed_polls_months = round(fed_polls_months,3),
+         
+         fed_vote_share = round(fed_vote_share,3),
+         
+         fed_trend_days = round(fed_trend_days,3),
+         fed_trend_weeks = round(fed_trend_weeks,3),
+         fed_trend_months = round(fed_trend_months,3)
+         ) %>%
+  mutate(
+    votesharelr = log(voteshare / (1 - voteshare)),
+    votesharelr_l1 = log_ratio(voteshare_l1),
+    pollslr_days = log_ratio((polls_days)),
+    pollslr_weeks = log_ratio((polls_weeks)),
+    pollslr_months = log_ratio((polls_months))
+  )
+
+## Add econ data
+
+econ_data <- read.xlsx("input/statistischer-bericht-2180120233225.xlsx", 
+                                                  sheet = "81000-118", startRow = 6)
+econ_data <- econ_data[, c(1, 2, 6)]
+names(econ_data) <- c("year", "quarter", "growth")
+econ_data$quarter <- str_extract(econ_data$quarter, "\\d+")
+
+# Fill year NAs from top
+econ_data$year <- na.locf(econ_data$year)
+
+# Remove rows 86:89
+econ_data <- econ_data[-c(86:89),]
+
+econ_data <- filter(econ_data, !is.na(quarter))
+
+# Create date variable which is the end of each quarter
+econ_data$date <- as.Date(paste0(econ_data$year, "-", as.numeric(econ_data$quarter)*3, "-01")) + months(1) - days(1)
+econ_data$growth <- as.numeric(econ_data$growth)
+
+econ_data <- select(econ_data, date, growth)
+
+full_data$growth <- sapply(full_data$electiondate, function(edate) {
+  # Get the last econ_data$date before electiondate
+  last_date_before_election <- max(econ_data$date[econ_data$date <= edate])
+  
+  # Get the growth corresponding to that date
+  growth_value <- econ_data$growth[econ_data$date == last_date_before_election]
+  
+  return(growth_value)
+})
+
+full_data$growthXgov <- full_data$growth * full_data$gov
+
+####################################
+# Write data to output
+save(full_data, file = "output/full_data.RData")

@@ -1,0 +1,26 @@
+{
+    "id": "3DAB1EAF",
+    "path": "~/Desktop/Github/zweitstimme/state-models-jelst/scripts/02_forecast.R",
+    "project_path": "scripts/02_forecast.R",
+    "type": "r_source",
+    "hash": "3376176970",
+    "contents": "",
+    "dirty": false,
+    "created": 1745397143035.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "32,58",
+        "scrollLine": "30"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1741604295,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1741604295,
+    "read_only": false,
+    "read_only_alternatives": []
+}

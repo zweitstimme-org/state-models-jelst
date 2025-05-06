@@ -1,0 +1,51 @@
+# State Election Models
+
+This repository contains code and data for analyzing and modeling state election results in Germany.
+
+## Project Structure
+
+The project is organized into the following sections:
+
+### Main Directories
+- `_auxiliary/`: Contains auxiliary files and utility functions
+  - `packages.R`: R package dependencies
+  - `functions.R`: Utility functions for data processing and analysis
+
+- `data/`: Contains the input data files
+  - `full_data.RData`: Complete dataset for models
+  - `forecast_data.RData`: Data prepared for forecasting
+  - `state-polls.csv`: Raw state polling data
+  - `state-election-results.csv`: Historical state election results
+
+- `scripts/`: Contains the main R scripts for analysis
+  1. `01_estimating-models.R`: Implementation of the statistical models
+  2. `02_forecast.R`: Generation of election forecasts
+  3. `03_descriptives-data.R`: Descriptives for the data
+  4. `04_descriptives-eval.R`: Descriptives for evaluation of model performance
+  5. `05_descriptives-forecast.R`: Analysis and visualization of forecast results
+
+- `output/`: Generated output files and results
+  - `figures/`: Generated plots and visualizations
+    - Various evaluation plots (MAE, RMSE, parameter estimates)
+    - Polling coverage density plots
+    - Forecast evaluation figures
+  - `models/`: Saved model objects and results
+    - Bayesian model estimates and evaluations
+    - Linear regression model results
+    - Model error analyses
+  - `tables/`: Generated LaTeX tables
+    - Model estimation results
+    - Forecast confidence intervals for different states and timeframes
+  - `forecast/`: Forecast results
+    - State-specific forecast data
+    - Pre-registered forecast results
+
+## Contact
+
+**Cornelius Erfort**  
+Post-doctoral Researcher  
+University of Witten/Herdecke  
+Department of Philosophy, Politics, and Economics  
+Alfred-Herrhausen-Straße 50, 58455 Witten, Germany  
+[cornelius.erfort@uni-wh.de](mailto:cornelius.erfort@uni-wh.de)  
+[ORCID: 0000-0001-8534-7748](https://orcid.org/0000-0001-8534-7748)

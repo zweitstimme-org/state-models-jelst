@@ -1,0 +1,26 @@
+{
+    "id": "C64037DE",
+    "path": "~/Desktop/Github/zweitstimme/state-models-jelst/scripts/04_descriptives-eval.R",
+    "project_path": "scripts/04_descriptives-eval.R",
+    "type": "r_source",
+    "hash": "973563761",
+    "contents": "",
+    "dirty": false,
+    "created": 1745407858289.0,
+    "source_on_save": false,
+    "relative_order": 9,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "92,0",
+        "scrollLine": "27"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1745408833,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1745408833773,
+    "read_only": false,
+    "read_only_alternatives": []
+}

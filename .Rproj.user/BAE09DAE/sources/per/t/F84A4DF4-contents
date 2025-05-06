@@ -1,0 +1,937 @@
+
+
+# Function fo log-ration with correction if value ß
+log_ratio <- function(x,corre_fct = 0.01){
+  x[x < 0] <- 0
+  x[x == 0] <- x[x == 0] + corre_fct 
+  return(log(x / (1 - x)))
+}        
+
+# Function to mask results and select
+mask_and_select <- function(sel = "nw_2022-05-15", dat = data_structural){
+  
+  # Step 1: Determine the election date for the selected election
+  date <- dat %>% filter(elec_ind == sel) %>% pull(electiondate) %>% unique()
+  
+  # Step 2: Filter the data to include only elections that occurred before the selected election or the selected election itself
+  dat <- dat %>% filter(electiondate < date | elec_ind == sel)
+  
+  # Step 3: Extract vote share data for the selected election, including relevant columns (party, state, election index, and year)
+  dat_voterest  <- dat %>%
+    filter(elec_ind == sel) %>% 
+    dplyr::select(voteshare, party, state, elec_ind, year)
+  
+  # Step 4: Assign a unique ID (pid) to each row in the extracted data
+  dat_voterest$pid <- 1:nrow(dat_voterest)
+  
+  # Step 5: Mask the vote share results for the selected election (replace with NA)
+  dat <- dat %>% mutate(
+    voteshare = case_when(elec_ind == sel ~ NA, TRUE ~ voteshare)
+  )
+  
+  # Step 6: Return a list containing the masked data and the extracted vote share data
+  return(list("dat_masked" = dat, "dat_results" = dat_voterest))
+  
+}
+
+# Function to impute missing poll data
+imput_poll <- function(dat = data_structural){
+  
+  # Step 1: Impute missing poll data for the 'polls_days' variable using linear regression
+  m_days <- lm(polls_days ~ voteshare_l1, filter(dat, pollsNA_days == 0)) 
+  dat$polls_days[dat$pollsNA_days == 1] <- predict(m_days, filter(dat, pollsNA_days == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_days == 1), mean = 0, sd = sigma(m_days))
+  
+  # Step 2: Impute missing poll data for the 'polls_weeks' variable using linear regression
+  m_weeks <- lm(polls_weeks ~ voteshare_l1, filter(dat, pollsNA_weeks == 0)) 
+  dat$polls_weeks[dat$pollsNA_weeks == 1] <- predict(m_weeks, filter(dat, pollsNA_weeks == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_weeks == 1), mean = 0, sd = sigma(m_weeks))
+  
+  # Step 3: Impute missing poll data for the 'polls_months' variable using linear regression
+  m_mnts <- lm(polls_months ~ voteshare_l1, filter(dat, pollsNA_months == 0)) 
+  dat$polls_months[dat$pollsNA_months == 1] <- predict(m_mnts, filter(dat, pollsNA_months == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_months == 1), mean = 0, sd = sigma(m_mnts))
+  
+  # Step 4: Return the dataset with imputed poll data
+  return(dat)
+}
+
+# Function to run one iteration of the loop for processing election data
+process_election_lm <- function(elec, 
+                                predictor_sets = list(
+                                  "months" = c("polls_months", "voteshare_l1", "pm", "gov", "new_party"),
+                                  "weeks" = c("polls_weeks", "voteshare_l1", "pm", "gov", "new_party"),
+                                  "days" = c("polls_days", "voteshare_l1", "pm", "gov", "new_party")
+                                )) {
+  
+  # Step 1: Mask the selected election results and prepare the data for processing
+  dat_list <- mask_and_select(sel = elec)
+  dat_masked <- dat_list$dat_masked
+  
+  # Step 2: Impute missing poll data in the masked dataset
+  dat_masked <- imput_poll(dat_masked)
+  
+  # Step 3: Initialize an empty list to store results from each predictive model
+  all_res_dat <- list()
+  
+  # Step 4: Loop through each set of predictors (e.g., months, weeks, days)
+  for (name in names(predictor_sets)) {
+    
+    # Step 4a: Create a linear model formula based on the current set of predictors
+    lm_form <- as.formula(paste("voteshare ~", paste(predictor_sets[[name]], collapse = " + ")))
+    
+    # Step 4b: Fit the linear model using the masked data
+    mdl <- lm(lm_form, data = dat_masked)
+    
+    # Step 4c: Prepare the prediction data by filtering for the selected election and selecting the relevant predictors
+    pred_dat <- dat_masked %>% filter(elec_ind == elec) %>% select(predictor_sets[[name]])
+    
+    # Step 4d: Predict the vote share using the fitted model
+    res_dat <- dat_list$dat_results
+    res_dat$pred <- predict(mdl, pred_dat)
+    
+    # Step 4e: Add an identifier to the results indicating which predictor set was used
+    res_dat$model_id <- paste0("model_", name)
+    
+    # Step 4f: Store the results in the list
+    all_res_dat[[name]] <- res_dat
+  }
+  
+  # Step 5: Combine the results from all models into a single data frame
+  combined_res_dat <- do.call(rbind, all_res_dat)
+  
+  # Step 6: Return the combined results
+  return(combined_res_dat)
+}
+
+# Function to run regression models and add predictions with confidence intervals
+run_regression_models <- function(data, forecast_data,  
+                                  models, model_forecast) {
+  
+  
+  # Initialize a list to store model summaries
+  model_summaries <- list()
+  
+  # Fit the models and store the summaries
+  for (model_name in names(models)) {
+    model <- lm(as.formula(models[[model_name]]), data)
+    model_summaries[[model_name]] <- model
+    print(summary(model_summaries[[model_name]]))  # Print the summary
+  }
+  
+  # Select the relevant columns from the forecast data
+  dat_fore <- forecast_data %>% select(names(coef(model_summaries[[model_forecast]]))[-1])
+  
+  # Add predictions with confidence intervals using the first model (m1 as example)
+  forecast_data_pred <- predict(lm(models[[model_forecast]], data = data), newdata = dat_fore, interval = "prediction")
+  forecast_data <- cbind(forecast_data,forecast_data_pred)
+  
+  return(list("model_summaries" = model_summaries, "forecast_data" = forecast_data))
+}
+
+
+# Function to mask results and select
+mask_and_select <- function(sel = "nw_2022-05-15", dat = data_structural){
+  
+  # Step 1: Extract the election date of the selected election
+  date <- dat %>% filter(elec_ind == sel) %>% pull(electiondate) %>% unique()
+  
+  # Step 2: Filter the data to include only elections that occurred before the selected election date
+  # and include the selected election itself
+  dat <- dat %>% filter(electiondate < date | elec_ind == sel)
+  
+  # Step 3: Extract the vote share data and relevant columns (party, state, election index, and year)
+  dat_voterest <- dat %>% 
+    filter(elec_ind == sel) %>% 
+    dplyr::select(voteshare, party, state, elec_ind, year)
+  
+  # Step 4: Assign a unique identifier (pid) to each row in the extracted data
+  dat_voterest$pid <- 1:nrow(dat_voterest)
+  
+  # Step 5: Mask the vote share results of the selected election by replacing them with NA
+  dat <- dat %>% mutate(
+    voteshare = case_when(elec_ind == sel ~ NA, TRUE ~ voteshare)
+  )
+  
+  # Step 6: Return a list containing the masked data and the extracted vote share data
+  return(list("dat_masked" = dat, "dat_results" = dat_voterest))
+  
+}
+
+# Function to turn data into a list for Stan model input
+turn_in_stanlist <- function(dat, 
+                             predictors = c("polls_weeks","voteshare_l1","pm","gov","new_party"),
+                             dependent  = "voteshare"){
+  
+  # Step 1: Arrange data by election index and state
+  prep_dat <- dat %>% arrange(elec_ind, state)
+  
+  # Step 2: Create a matrix of election results (dependent variable)
+  election_res <- as.matrix(prep_dat[, dependent])
+  
+  # Step 3: Create a matrix of predictors for past elections
+  election_pred <- as.matrix(prep_dat[, predictors])
+  
+  # Step 4: Extract party names and calculate the number of parties
+  party_names <- prep_dat$party
+  nParties <- length(party_names) # Number of parties in upcoming election
+  nParties_vec <- as.vector(table(prep_dat$elec_ind)) # Number of parties in all elections
+  pid <- as.numeric(as.factor(party_names))
+  
+  # Step 5: Identify observed and missing election results
+  ii_obs <- which(complete.cases(c(election_res))) # Index of observed elections for Stan
+  ii_mis <- which(!complete.cases(c(election_res))) # Index of missing election results
+  ii_state <- as.numeric(as.factor(prep_dat$state)) # State indicator
+  
+  # Step 6: Calculate the number of years specific to each party
+  year_seq <- min(prep_dat$year):max(prep_dat$year)
+  NY <- length(year_seq) + 1 # Include prior year
+  NY_start <- sapply(1:length(unique(pid)), function(pid_id) min(prep_dat$year[pid == pid_id]))
+  NY_prior <- sapply(NY_start, function(y) which(year_seq == y))
+  NY_party <- NY - NY_prior + 1
+  
+  # Step 7: Create a list containing all necessary data for the Stan model
+  forstan <- list(
+    NE = length(unique(prep_dat$elec_ind)), # Number of elections
+    NE_mis = length(unique(prep_dat$elec_ind[ii_mis])), # Number of elections with missing results
+    Nobs = length(ii_obs), # Number of observations
+    Nmis = length(ii_mis), # Number of missing outcomes
+    N = nrow(election_res), # Total number of rows in election results
+    v_obs = c(election_res[ii_obs,]),  # Observed dependent variable (vote share)
+    x = election_pred, # Predictors matrix
+    K = ncol(election_pred),   # Number of predictors
+    p = nParties_vec, # Number of parties in the different elections
+    s = ii_state, # State indicator
+    S = max(ii_state), # Number of states
+    ii_obs = ii_obs, # Index of observed election results
+    ii_mis = ii_mis,  # Index of missing election results
+    p_mis = length(ii_mis), # Number of missing outcomes
+    pid = pid, # Party ID
+    NP = length(unique(pid)), # Number of unique parties
+    NY = NY, # Number of years considered
+    year_partyprior = NY_prior, # Prior year for each party
+    year = prep_dat$year - (min(prep_dat$year) - 2) # Adjusted year sequence
+  )
+  
+  # Step 8: Return the list for Stan model input
+  return(forstan)
+  
+}
+
+# Function to impute missing poll data
+imput_poll <- function(dat = data_structural){
+  
+  # Step 1: Impute missing data for 'polls_days' using linear regression
+  m_days <- lm(polls_days ~ voteshare_l1, filter(dat, pollsNA_days == 0)) 
+  dat$polls_days[dat$pollsNA_days == 1] <- predict(m_days, filter(dat, pollsNA_days == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_days == 1), mean = 0, sd = sigma(m_days))
+  
+  # Step 2: Impute missing data for 'polls_weeks' using linear regression
+  m_weeks <- lm(polls_weeks ~ voteshare_l1, filter(dat, pollsNA_weeks == 0)) 
+  dat$polls_weeks[dat$pollsNA_weeks == 1] <- predict(m_weeks, filter(dat, pollsNA_weeks == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_weeks == 1), mean = 0, sd = sigma(m_weeks))
+  
+  # Step 3: Impute missing data for 'polls_months' using linear regression
+  m_mnts <- lm(polls_months ~ voteshare_l1, filter(dat, pollsNA_months == 0)) 
+  dat$polls_months[dat$pollsNA_months == 1] <- predict(m_mnts, filter(dat, pollsNA_months == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_months == 1), mean = 0, sd = sigma(m_mnts))
+  
+  # Step 4: Return the dataset with imputed poll data
+  return(dat)
+}
+
+# Function to compute credible intervals for forecast samples
+credible_intervals <- function(dat_smpl, alpha = (1/6)/2) {
+  
+  # Step 1: Calculate credible intervals, mean, median, and standard deviation for each variable
+  intervals <- dat_smpl %>%
+    summarise_all(list(
+      lower = ~quantile(.x, probs = alpha),
+      median = ~median(.x),
+      mean = ~mean(.x),
+      sd = ~sd(.x),
+      upper = ~quantile(.x, probs = 1 - alpha)
+    ))
+  
+  # Step 2: Reshape the data for easier interpretation and merge with party ID
+  intervals_long <- intervals %>%
+    pivot_longer(cols = everything(),
+                 names_to = c("variable", ".value"),
+                 names_pattern = "(.*)_(.*)") %>%
+    mutate(pid = str_extract(variable, "\\d+") %>% as.integer())
+  
+  # Step 3: Return the credible intervals
+  return(intervals_long)
+}
+
+# Function to run Stan model with specified predictors and process the results
+run_stan_with_predictors <- function(dat_masked, dat_list, mdl, num_iter, num_warmup, nchains, cores_per_stan, predictors) {
+  
+  # Step 1: Prepare data for Stan model using the specified predictors
+  forstan <- turn_in_stanlist(dat_masked, predictors = predictors)
+  
+  # Step 2: Run the Stan model with the specified parameters (number of iterations, warmup, chains, and cores)
+  res_smpl <- stan(file = mdl, data = forstan,
+                   iter = num_iter, warmup = num_warmup, 
+                   chains = nchains, cores = cores_per_stan)
+  
+  # Step 3: Convert Stan samples to a data frame and compute credible intervals for forecasted values
+  forcast_smpl <- as.data.frame(res_smpl, pars = "v_mis")
+  forcast_ci <- credible_intervals(forcast_smpl)
+  
+  # Step 4: Merge the forecast results with the original data results based on party ID
+  res_dat <- left_join(dat_list$dat_results, forcast_ci, by = "pid")
+  
+  # Step 5: Return the merged data with forecast results
+  return(res_dat)
+}
+
+# Function to run one iteration of the loop
+process_election_stan <- function(elec,  mdl = "model_code/dirichlet_fundamentals_eval.stan",
+                                  predictor_sets = list(
+                                    "months" = c("polls_months", "voteshare_l1", "pm", "gov", "new_party"),
+                                    "weeks" = c("polls_weeks", "voteshare_l1", "pm", "gov", "new_party"),
+                                    "days" = c("polls_days", "voteshare_l1", "pm", "gov", "new_party")
+                                  )) {
+  
+  # Mask and prepare the data
+  dat_list <- mask_and_select(sel = elec)
+  dat_masked <- dat_list$dat_masked
+  dat_masked <- imput_poll(dat_masked)
+  
+  # Initialize an empty list to store results for each model
+  all_res_dat <- list()
+  
+  # Loop over each set of predictors
+  for (name in names(predictor_sets)) {
+    # Run the model with the current set of predictors
+    res_dat <- run_stan_with_predictors(
+      dat_masked = dat_masked,
+      dat_list = dat_list,
+      mdl = mdl,
+      num_iter = num_iter,
+      num_warmup = num_warmup,
+      nchains = nchains,
+      cores_per_stan = cores_per_stan,
+      predictors = predictor_sets[[name]]
+    )
+    
+    # Store the result with an identifier for the predictor set
+    res_dat$model_id <- paste0("model_", name)
+    all_res_dat[[name]] <- res_dat
+  }
+  
+  # Combine the results from all models into a single data frame
+  combined_res_dat <- do.call(rbind, all_res_dat)
+  
+  return(combined_res_dat)
+}
+
+
+# Impute Polls
+impute_polls <- function(var, na_var) {
+  model <- lm(as.formula(paste(var, "~ voteshare_l1")), filter(data_structural, !!sym(na_var) == 0))
+  data_structural[[var]][data_structural[[na_var]] == 1] <- predict(model, filter(data_structural, !!sym(na_var) == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(data_structural[[na_var]] == 1), mean = 0, sd = sigma(model))
+  plot(data_structural[[var]] ~ voteshare_l1, data_structural)
+}
+
+
+# Functions for Data =====  
+
+# Define the general function
+generate_forecast_data <- function(data = forecast_data, election_id, model, 
+                                   inv_function = function(x) {exp(x)/(1 + exp(x))}, 
+                                   alpha = 1/6, party_colors, caption_text) {
+  
+  # Step 1: Set up Prediction Data for the specified election
+  pred_dat <- data %>% 
+    filter(elec_ind == election_id, party != "oth")
+  
+  # Step 2: Extract relevant predictors based on the model's coefficients
+  pred_weeks <- pred_dat %>% 
+    select(names(coef(model))[-1])
+  
+  # Step 3: Posterior Prediction
+  pred_sim <- posterior_predict(model, pred_weeks)
+  
+  # Step 4: Apply the inverse function to transform the dependent variable
+  if(!is.null(inv_function)){
+    pred_sim <- apply(pred_sim, 2, inv_function)
+  }
+  
+  # Step 5: Calculate summary statistics (mean, lower bound, upper bound)
+  pred_mean <- apply(pred_sim, 2, mean)
+  pred_lwr <- apply(pred_sim, 2, quantile, probs = alpha / 2)
+  pred_upr <- apply(pred_sim, 2, quantile, probs = 1 - (alpha / 2))
+  
+  # Step 6: Combine prediction results with the original data
+  pred_dat <- cbind(pred_dat, fit = pred_mean, lwr = pred_lwr, upr = pred_upr)
+  
+  
+  return(pred_dat)
+}
+
+
+# Function to get posterior draws in long format
+get_posterior_draws <- function(data = forecast_data, election_id, model, 
+                                inv_function= function(x) {exp(x)/(1 + exp(x))}) {
+  
+  # Step 1: Set up Prediction Data for the specified election
+  pred_dat <- data  %>% 
+    filter(elec_ind == election_id, party != "oth")
+  
+  # Step 2: Extract relevant predictors based on the model's coefficients
+  pred_weeks <- pred_dat %>% 
+    select(names(coef(model))[-1])
+  
+  # Step 3: Posterior Prediction
+  pred_sim <- posterior_predict(model, pred_weeks)
+  
+  # Step 4: Apply the inverse function to transform the dependent variable
+  if(!is.null(inv_function)){
+    pred_sim <- apply(pred_sim, 2, inv_function)
+  }
+  
+  # Step 5: Convert the posterior draws to a long format
+  pred_long <- as.data.frame(pred_sim) %>%
+    mutate(draw = row_number()) %>%
+    pivot_longer(cols = -draw, names_to = "party", values_to = "posterior_draw") %>%
+    mutate(party = pred_dat$party[as.numeric(gsub("V", "", party))],
+           elec_ind = election_id,
+           state = unique(pred_dat$state),
+           date = unique(pred_dat$electiondate))
+  
+  return(pred_long)
+}
+
+# Define the function to map party codes to party names
+map_party_names <- function(party_codes) {
+  party_labels <- case_when(
+    party_codes == "afd" ~ "AfD",
+    party_codes == "bsw" ~ "BSW",
+    party_codes == "cdu" ~ "CDU",
+    party_codes == "gru" ~ "Greens",
+    party_codes == "spd" ~ "SPD",
+    party_codes == "lin" ~ "Linke",
+    party_codes == "fdp" ~ "FDP",
+    TRUE ~ "Other"  # Default label for any unspecified party code
+  )
+  
+  return(party_labels)
+}
+
+# Define party colors
+party_colors <- c(
+  AfD = "#009DE0",      # AfD (Blue)
+  BSW = "#800080",      # BSW (Yellow)
+  CDU = "#151518",      # CDU (Black)
+  FDP = "#FFED00",      # FDP (Yellow)
+  FW = "#FF8000",       # FW (Orange)
+  Greens = "#409A3C",   # Greens (Green)
+  Linke = "#BE3075",    # Linke (Dark Red)
+  Other = "#808080",    # Other (Grey)
+  SPD = "#E3000F"       # SPD (Red)
+)
+
+
+
+# Define the function to map state codes to state names
+map_state_names <- function(state_codes) {
+  state_labels <- case_when(
+    state_codes == "bb" ~ "Brandenburg",
+    state_codes == "be" ~ "Berlin",
+    state_codes == "bw" ~ "Baden-Württemberg",
+    state_codes == "by" ~ "Bavaria",
+    state_codes == "hb" ~ "Bremen",
+    state_codes == "he" ~ "Hesse",
+    state_codes == "hh" ~ "Hamburg",
+    state_codes == "mv" ~ "Mecklenburg-Vorpommern",
+    state_codes == "ni" ~ "Lower Saxony",
+    state_codes == "nw" ~ "North Rhine-Westphalia",
+    state_codes == "rp" ~ "Rhineland-Palatinate",
+    state_codes == "sh" ~ "Schleswig-Holstein",
+    state_codes == "sl" ~ "Saarland",
+    state_codes == "sn" ~ "Saxony",
+    state_codes == "st" ~ "Saxony-Anhalt",
+    state_codes == "th" ~ "Thuringia",
+    
+    TRUE ~ "Other"  # Default label for any unspecified party code
+  )
+  
+  return(state_labels)
+}
+
+# Define the function to generate the election forecast plot
+generate_forecast_plot <- function(dat, title, subtitle, party_colors, caption_text) {
+  
+  # Plot
+  plot <- ggplot(data=dat, aes(x = reorder(party_name, -fit), y = fit)) +
+    geom_hline(yintercept = 0.05, linetype = "dotted", size = 1.5, color = "black") +
+    geom_linerange(aes(ymin = lwr, ymax = upr), linewidth = 10, alpha = 0.3, col = party_colors[dat$party_name]) +
+    geom_point(size = 6, color = "white", shape = 21, stroke = 2, fill = party_colors[dat$party_name]) +
+    geom_point(size = 2, fill = "white", shape = 21) +
+    geom_label(aes(y = upr + 0.03, label = paste(round(fit * 100, 1), "%"))) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 0.5)) +
+    labs(
+      title = title,
+      subtitle = subtitle,
+      caption = caption_text,
+      x = NULL,
+      y = NULL
+    ) +
+    ylim(0, 0.45) +
+    theme_minimal() +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+      plot.subtitle = element_text(size = 12, hjust = 0.5),
+      axis.text.x = element_text(size = 12, face = "bold", color = "black"),
+      axis.ticks.y = element_blank(),
+      axis.line.y = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      plot.margin = margin(10, 10, 10, 10)
+    )
+  
+  return(plot)
+}
+
+
+# # Get Latnet Support using random walk model ==== 
+get_latent_support <- function(data, party, date, last_election_date,
+                               var_party, var_date, var_percent) {
+  
+  #
+  # Reuires DLM
+  require(dlm)
+  
+  # Convert date column to Date class if not already
+  data[[var_date]] <- as.Date(data[[var_date]])
+  
+  # No data after date
+  filtered_data <- data[data[[var_party]] == party & data[[var_date]] < date, ]
+  
+  # Ensure the data is sorted by date
+  filtered_data <- filtered_data[order(filtered_data[[var_date]]), ]
+  
+  # Times series format from last elction to date
+  complete_data <- data.frame(Datum = seq.Date(from = last_election_date, to = date, by = "day"))
+  
+  merged_data <- merge(complete_data, filtered_data, by.x = "Datum", by.y = "date", all.x = TRUE)
+  
+  # Create Time-series data with missing values
+  start_date <- min(merged_data$Datum)
+  ts_data <- ts(merged_data$poll_share, start = c(as.numeric(format(start_date, "%Y")),
+                                                  as.numeric(format(start_date, "%j"))), frequency = 365)
+  
+  # Define the DLM model with a random walk component
+  build_dlm <- function(param) {
+    dlmModPoly(order = 1, dV = exp(param[1]), dW = exp(param[2]))
+  }
+  
+  # Fit the model using Maximum Likelihood Estimation
+  fit <- dlmMLE(ts_data, parm = c(0, 0), build = build_dlm)
+  
+  # Build the final model with estimated parameters
+  model <- build_dlm(fit$par)
+  
+  # Apply the Kalman filter to estimate the latent support
+  filtered <- dlmFilter(ts_data, model)
+  
+  # Apply smoothing to get a refined estimate of the latent support
+  smoothed <- dlmSmooth(filtered)
+  latent_support <- smoothed$s[-1]  # Remove the first NA value
+  
+  # Return the latent support for the specified date
+  if (nrow(filter(filtered_data, !is.na(poll_share))) > 1) return(latent_support[length(latent_support)]) else return(NA)
+}
+
+
+# Get Latnet Support using random walk model ==== 
+# Adapted for use with land
+get_latent_support_land <- function(data, party, land, date, last_election_date,
+                                    var_party, var_date, var_percent, var_land) {
+  
+  # data <- current_polls
+  # party = "spd"
+  # land = "th"
+  # last_election_date = ymd("2019-09-01")
+  # var_party = "party"
+  # var_date = "date"
+  # var_percent = "poll_share"
+  # date = ymd("2024-08-24")
+  
+  # Reuires DLM
+  require(dlm)
+  
+  # Convert date column to Date class if not already
+  data[[var_date]] <- as.Date(data[[var_date]])
+  
+  # No data after date
+  filtered_data <- data[data[[var_party]] == party & data[[var_date]] < date & data[[var_land]] == land, ]
+  
+  # Ensure the data is sorted by date
+  filtered_data <- filtered_data[order(filtered_data[[var_date]]), ]
+  
+  # Times series format from last election to date
+  complete_data <- data.frame(Datum = seq.Date(from = last_election_date, to = date, by = "day"))
+  
+  merged_data <- merge(complete_data, filtered_data, by.x = "Datum", by.y = "date", all.x = TRUE)
+  
+  # Create Time-series data with missing values
+  start_date <- min(merged_data$Datum)
+  ts_data <- ts(merged_data[[var_percent]], start = c(as.numeric(format(start_date, "%Y")), 
+                                                      as.numeric(format(start_date, "%j"))), frequency = 365)
+  
+  # Define the DLM model with a random walk component
+  build_dlm <- function(param) {
+    dlmModPoly(order = 1, dV = exp(param[1]), dW = exp(param[2]))
+  }
+  
+  # Fit the model using Maximum Likelihood Estimation
+  fit <- dlmMLE(ts_data, parm = c(0, 0), build = build_dlm)
+  
+  # Build the final model with estimated parameters
+  model <- build_dlm(fit$par)
+  
+  # Apply the Kalman filter to estimate the latent support
+  filtered <- dlmFilter(ts_data, model)
+  
+  # Apply smoothing to get a refined estimate of the latent support
+  smoothed <- dlmSmooth(filtered)
+  latent_support <- smoothed$s[-1]  # Remove the first NA value
+  
+  # Return the latent support for the specified date
+  if (nrow(filter(filtered_data, !is.na(var_percent))) > 1) return(latent_support[length(latent_support)]) else return(NA)
+}
+
+
+# Function to mask results and select
+mask_and_select <- function(sel = "nw_2022-05-15", dat = data_structural){
+  
+  # Step 1: Determine the election date for the selected election
+  date <- dat %>% filter(elec_ind == sel) %>% pull(electiondate) %>% unique()
+  
+  # Step 2: Filter the data to include only elections that occurred before the selected election or the selected election itself
+  dat <- dat %>% filter(electiondate < date | elec_ind == sel)
+  
+  # Step 3: Extract vote share data for the selected election, including relevant columns (party, state, election index, and year)
+  dat_voterest  <- dat %>%
+    filter(elec_ind == sel) %>% 
+    dplyr::select(voteshare, party, state, elec_ind, year)
+  
+  # Step 4: Assign a unique ID (pid) to each row in the extracted data
+  dat_voterest$pid <- 1:nrow(dat_voterest)
+  
+  # Step 5: Mask the vote share results for the selected election (replace with NA)
+  dat <- dat %>% mutate(
+    voteshare = case_when(elec_ind == sel ~ NA, TRUE ~ voteshare)
+  )
+  
+  # Step 6: Return a list containing the masked data and the extracted vote share data
+  return(list("dat_masked" = dat, "dat_results" = dat_voterest))
+  
+}
+
+# Function to impute missing poll data
+imput_poll <- function(dat = data_structural){
+  
+  # Step 1: Impute missing poll data for the 'polls_days' variable using linear regression
+  m_days <- lm(polls_days ~ voteshare_l1, filter(dat, pollsNA_days == 0)) 
+  dat$polls_days[dat$pollsNA_days == 1] <- predict(m_days, filter(dat, pollsNA_days == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_days == 1), mean = 0, sd = sigma(m_days))
+  
+  # Step 2: Impute missing poll data for the 'polls_weeks' variable using linear regression
+  m_weeks <- lm(polls_weeks ~ voteshare_l1, filter(dat, pollsNA_weeks == 0)) 
+  dat$polls_weeks[dat$pollsNA_weeks == 1] <- predict(m_weeks, filter(dat, pollsNA_weeks == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_weeks == 1), mean = 0, sd = sigma(m_weeks))
+  
+  # Step 3: Impute missing poll data for the 'polls_months' variable using linear regression
+  m_mnts <- lm(polls_months ~ voteshare_l1, filter(dat, pollsNA_months == 0)) 
+  dat$polls_months[dat$pollsNA_months == 1] <- predict(m_mnts, filter(dat, pollsNA_months == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_months == 1), mean = 0, sd = sigma(m_mnts))
+  
+  # Step 4: Return the dataset with imputed poll data
+  return(dat)
+}
+
+# Function to run one iteration of the loop for processing election data
+process_election_lm <- function(elec, 
+                                predictor_sets = list(
+                                  "months" = c("polls_months", "voteshare_l1", "pm", "gov", "new_party"),
+                                  "weeks" = c("polls_weeks", "voteshare_l1", "pm", "gov", "new_party"),
+                                  "days" = c("polls_days", "voteshare_l1", "pm", "gov", "new_party")
+                                )) {
+  
+  # Step 1: Mask the selected election results and prepare the data for processing
+  dat_list <- mask_and_select(sel = elec)
+  dat_masked <- dat_list$dat_masked
+  
+  # Step 2: Impute missing poll data in the masked dataset
+  dat_masked <- imput_poll(dat_masked)
+  
+  # Step 3: Initialize an empty list to store results from each predictive model
+  all_res_dat <- list()
+  
+  # Step 4: Loop through each set of predictors (e.g., months, weeks, days)
+  for (name in names(predictor_sets)) {
+    
+    # Step 4a: Create a linear model formula based on the current set of predictors
+    lm_form <- as.formula(paste("voteshare ~", paste(predictor_sets[[name]], collapse = " + ")))
+    
+    # Step 4b: Fit the linear model using the masked data
+    mdl <- lm(lm_form, data = dat_masked)
+    
+    # Step 4c: Prepare the prediction data by filtering for the selected election and selecting the relevant predictors
+    pred_dat <- dat_masked %>% filter(elec_ind == elec) %>% select(predictor_sets[[name]])
+    
+    # Step 4d: Predict the vote share using the fitted model
+    res_dat <- dat_list$dat_results
+    res_dat$pred <- predict(mdl, pred_dat)
+    
+    # Step 4e: Add an identifier to the results indicating which predictor set was used
+    res_dat$model_id <- paste0("model_", name)
+    
+    # Step 4f: Store the results in the list
+    all_res_dat[[name]] <- res_dat
+  }
+  
+  # Step 5: Combine the results from all models into a single data frame
+  combined_res_dat <- do.call(rbind, all_res_dat)
+  
+  # Step 6: Return the combined results
+  return(combined_res_dat)
+}
+
+# Function to run regression models and add predictions with confidence intervals
+run_regression_models <- function(data, forecast_data,  
+                                  models, model_forecast) {
+  
+  
+  # Initialize a list to store model summaries
+  model_summaries <- list()
+  
+  # Fit the models and store the summaries
+  for (model_name in names(models)) {
+    model <- lm(as.formula(models[[model_name]]), data)
+    model_summaries[[model_name]] <- model
+    print(summary(model_summaries[[model_name]]))  # Print the summary
+  }
+  
+  # Select the relevant columns from the forecast data
+  dat_fore <- forecast_data %>% select(names(coef(model_summaries[[model_forecast]]))[-1])
+  
+  # Add predictions with confidence intervals using the first model (m1 as example)
+  forecast_data_pred <- predict(lm(models[[model_forecast]], data = data), newdata = dat_fore, interval = "prediction")
+  forecast_data <- cbind(forecast_data,forecast_data_pred)
+  
+  return(list("model_summaries" = model_summaries, "forecast_data" = forecast_data))
+}
+
+
+# Function to mask results and select
+mask_and_select <- function(sel = "nw_2022-05-15", dat = data_structural){
+  
+  # Step 1: Extract the election date of the selected election
+  date <- dat %>% filter(elec_ind == sel) %>% pull(electiondate) %>% unique()
+  
+  # Step 2: Filter the data to include only elections that occurred before the selected election date
+  # and include the selected election itself
+  dat <- dat %>% filter(electiondate < date | elec_ind == sel)
+  
+  # Step 3: Extract the vote share data and relevant columns (party, state, election index, and year)
+  dat_voterest <- dat %>% 
+    filter(elec_ind == sel) %>% 
+    dplyr::select(voteshare, party, state, elec_ind, year)
+  
+  # Step 4: Assign a unique identifier (pid) to each row in the extracted data
+  dat_voterest$pid <- 1:nrow(dat_voterest)
+  
+  # Step 5: Mask the vote share results of the selected election by replacing them with NA
+  dat <- dat %>% mutate(
+    voteshare = case_when(elec_ind == sel ~ NA, TRUE ~ voteshare)
+  )
+  
+  # Step 6: Return a list containing the masked data and the extracted vote share data
+  return(list("dat_masked" = dat, "dat_results" = dat_voterest))
+  
+}
+
+# Function to turn data into a list for Stan model input
+turn_in_stanlist <- function(dat, 
+                             predictors = c("polls_weeks","voteshare_l1","pm","gov","new_party"),
+                             dependent  = "voteshare"){
+  
+  # Step 1: Arrange data by election index and state
+  prep_dat <- dat %>% arrange(elec_ind, state)
+  
+  # Step 2: Create a matrix of election results (dependent variable)
+  election_res <- as.matrix(prep_dat[, dependent])
+  
+  # Step 3: Create a matrix of predictors for past elections
+  election_pred <- as.matrix(prep_dat[, predictors])
+  
+  # Step 4: Extract party names and calculate the number of parties
+  party_names <- prep_dat$party
+  nParties <- length(party_names) # Number of parties in upcoming election
+  nParties_vec <- as.vector(table(prep_dat$elec_ind)) # Number of parties in all elections
+  pid <- as.numeric(as.factor(party_names))
+  
+  # Step 5: Identify observed and missing election results
+  ii_obs <- which(complete.cases(c(election_res))) # Index of observed elections for Stan
+  ii_mis <- which(!complete.cases(c(election_res))) # Index of missing election results
+  ii_state <- as.numeric(as.factor(prep_dat$state)) # State indicator
+  
+  # Step 6: Calculate the number of years specific to each party
+  year_seq <- min(prep_dat$year):max(prep_dat$year)
+  NY <- length(year_seq) + 1 # Include prior year
+  NY_start <- sapply(1:length(unique(pid)), function(pid_id) min(prep_dat$year[pid == pid_id]))
+  NY_prior <- sapply(NY_start, function(y) which(year_seq == y))
+  NY_party <- NY - NY_prior + 1
+  
+  # Step 7: Create a list containing all necessary data for the Stan model
+  forstan <- list(
+    NE = length(unique(prep_dat$elec_ind)), # Number of elections
+    NE_mis = length(unique(prep_dat$elec_ind[ii_mis])), # Number of elections with missing results
+    Nobs = length(ii_obs), # Number of observations
+    Nmis = length(ii_mis), # Number of missing outcomes
+    N = nrow(election_res), # Total number of rows in election results
+    v_obs = c(election_res[ii_obs,]),  # Observed dependent variable (vote share)
+    x = election_pred, # Predictors matrix
+    K = ncol(election_pred),   # Number of predictors
+    p = nParties_vec, # Number of parties in the different elections
+    s = ii_state, # State indicator
+    S = max(ii_state), # Number of states
+    ii_obs = ii_obs, # Index of observed election results
+    ii_mis = ii_mis,  # Index of missing election results
+    p_mis = length(ii_mis), # Number of missing outcomes
+    pid = pid, # Party ID
+    NP = length(unique(pid)), # Number of unique parties
+    NY = NY, # Number of years considered
+    year_partyprior = NY_prior, # Prior year for each party
+    year = prep_dat$year - (min(prep_dat$year) - 2) # Adjusted year sequence
+  )
+  
+  # Step 8: Return the list for Stan model input
+  return(forstan)
+  
+}
+
+# Function to impute missing poll data
+imput_poll <- function(dat = data_structural){
+  
+  # Step 1: Impute missing data for 'polls_days' using linear regression
+  m_days <- lm(polls_days ~ voteshare_l1, filter(dat, pollsNA_days == 0)) 
+  dat$polls_days[dat$pollsNA_days == 1] <- predict(m_days, filter(dat, pollsNA_days == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_days == 1), mean = 0, sd = sigma(m_days))
+  
+  # Step 2: Impute missing data for 'polls_weeks' using linear regression
+  m_weeks <- lm(polls_weeks ~ voteshare_l1, filter(dat, pollsNA_weeks == 0)) 
+  dat$polls_weeks[dat$pollsNA_weeks == 1] <- predict(m_weeks, filter(dat, pollsNA_weeks == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_weeks == 1), mean = 0, sd = sigma(m_weeks))
+  
+  # Step 3: Impute missing data for 'polls_months' using linear regression
+  m_mnts <- lm(polls_months ~ voteshare_l1, filter(dat, pollsNA_months == 0)) 
+  dat$polls_months[dat$pollsNA_months == 1] <- predict(m_mnts, filter(dat, pollsNA_months == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(dat$pollsNA_months == 1), mean = 0, sd = sigma(m_mnts))
+  
+  # Step 4: Return the dataset with imputed poll data
+  return(dat)
+}
+
+# Function to compute credible intervals for forecast samples
+credible_intervals <- function(dat_smpl, alpha = (1/6)/2) {
+  
+  # Step 1: Calculate credible intervals, mean, median, and standard deviation for each variable
+  intervals <- dat_smpl %>%
+    summarise_all(list(
+      lower = ~quantile(.x, probs = alpha),
+      median = ~median(.x),
+      mean = ~mean(.x),
+      sd = ~sd(.x),
+      upper = ~quantile(.x, probs = 1 - alpha)
+    ))
+  
+  # Step 2: Reshape the data for easier interpretation and merge with party ID
+  intervals_long <- intervals %>%
+    pivot_longer(cols = everything(),
+                 names_to = c("variable", ".value"),
+                 names_pattern = "(.*)_(.*)") %>%
+    mutate(pid = str_extract(variable, "\\d+") %>% as.integer())
+  
+  # Step 3: Return the credible intervals
+  return(intervals_long)
+}
+
+# Function to run Stan model with specified predictors and process the results
+run_stan_with_predictors <- function(dat_masked, dat_list, mdl, num_iter, num_warmup, nchains, cores_per_stan, predictors) {
+  
+  # Step 1: Prepare data for Stan model using the specified predictors
+  forstan <- turn_in_stanlist(dat_masked, predictors = predictors)
+  
+  # Step 2: Run the Stan model with the specified parameters (number of iterations, warmup, chains, and cores)
+  res_smpl <- stan(file = mdl, data = forstan,
+                   iter = num_iter, warmup = num_warmup, 
+                   chains = nchains, cores = cores_per_stan)
+  
+  # Step 3: Convert Stan samples to a data frame and compute credible intervals for forecasted values
+  forcast_smpl <- as.data.frame(res_smpl, pars = "v_mis")
+  forcast_ci <- credible_intervals(forcast_smpl)
+  
+  # Step 4: Merge the forecast results with the original data results based on party ID
+  res_dat <- left_join(dat_list$dat_results, forcast_ci, by = "pid")
+  
+  # Step 5: Return the merged data with forecast results
+  return(res_dat)
+}
+
+# Function to run one iteration of the loop
+process_election_stan <- function(elec,  mdl = "model_code/dirichlet_fundamentals_eval.stan",
+                                  predictor_sets = list(
+                                    "months" = c("polls_months", "voteshare_l1", "pm", "gov", "new_party"),
+                                    "weeks" = c("polls_weeks", "voteshare_l1", "pm", "gov", "new_party"),
+                                    "days" = c("polls_days", "voteshare_l1", "pm", "gov", "new_party")
+                                  )) {
+  
+  # Mask and prepare the data
+  dat_list <- mask_and_select(sel = elec)
+  dat_masked <- dat_list$dat_masked
+  dat_masked <- imput_poll(dat_masked)
+  
+  # Initialize an empty list to store results for each model
+  all_res_dat <- list()
+  
+  # Loop over each set of predictors
+  for (name in names(predictor_sets)) {
+    # Run the model with the current set of predictors
+    res_dat <- run_stan_with_predictors(
+      dat_masked = dat_masked,
+      dat_list = dat_list,
+      mdl = mdl,
+      num_iter = num_iter,
+      num_warmup = num_warmup,
+      nchains = nchains,
+      cores_per_stan = cores_per_stan,
+      predictors = predictor_sets[[name]]
+    )
+    
+    # Store the result with an identifier for the predictor set
+    res_dat$model_id <- paste0("model_", name)
+    all_res_dat[[name]] <- res_dat
+  }
+  
+  # Combine the results from all models into a single data frame
+  combined_res_dat <- do.call(rbind, all_res_dat)
+  
+  return(combined_res_dat)
+}
+
+
+# Impute Polls
+impute_polls <- function(var, na_var) {
+  model <- lm(as.formula(paste(var, "~ voteshare_l1")), filter(data_structural, !!sym(na_var) == 0))
+  data_structural[[var]][data_structural[[na_var]] == 1] <- predict(model, filter(data_structural, !!sym(na_var) == 1) %>% select(voteshare_l1)) + 
+    rnorm(sum(data_structural[[na_var]] == 1), mean = 0, sd = sigma(model))
+  plot(data_structural[[var]] ~ voteshare_l1, data_structural)
+}

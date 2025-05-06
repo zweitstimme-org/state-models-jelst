@@ -1,0 +1,26 @@
+{
+    "id": "E82FFCA9",
+    "path": "~/Desktop/Github/zweitstimme/state-models-jelst/scripts/01_estimating-models.R",
+    "project_path": "scripts/01_estimating-models.R",
+    "type": "r_source",
+    "hash": "3442690657",
+    "contents": "",
+    "dirty": false,
+    "created": 1745397142489.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "529,32",
+        "scrollLine": "491"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1745408484,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1745408484577,
+    "read_only": false,
+    "read_only_alternatives": []
+}

@@ -1,0 +1,27 @@
+{
+    "id": "C46AFF6F",
+    "path": "~/Desktop/Github/zweitstimme/state-models-jelst/06_linear-model-robustness.R",
+    "project_path": "06_linear-model-robustness.R",
+    "type": "r_source",
+    "hash": "4081964553",
+    "contents": "",
+    "dirty": false,
+    "created": 1745405372564.0,
+    "source_on_save": false,
+    "relative_order": 8,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "129,51",
+        "scrollLine": "126"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1745411678,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1745411678927,
+    "read_only": false,
+    "read_only_alternatives": []
+}

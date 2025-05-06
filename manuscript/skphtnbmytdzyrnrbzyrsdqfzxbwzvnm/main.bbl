@@ -1,0 +1,296 @@
+\begin{thebibliography}{53}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Allers et~al.(2022)Allers, Rienks, and de~Natris]{allers2022parties}
+Maarten Allers, Harm Rienks, and Joes de~Natris.
+\newblock {When are parties punished for serving in a coalition government?}
+\newblock \emph{Electoral Studies}, 79:\penalty0 102516, 2022.
+
+\bibitem[Alt and Lowry(2000)]{alt2000dynamic}
+James~E Alt and Robert~C Lowry.
+\newblock {A dynamic model of state budget outcomes under divided partisan government}.
+\newblock \emph{Journal of Politics}, 62\penalty0 (4):\penalty0 1035--1069, 2000.
+
+\bibitem[Arzheimer(2019)]{arzheimer2019don}
+Kai Arzheimer.
+\newblock {Don't mention the war: How populist right-wing radicalism became (almost) normal in {Germany}}.
+\newblock \emph{J. Common Market Studies}, 57:\penalty0 90, 2019.
+
+\bibitem[Bardwell and Lewis-Beck(2004)]{bardwell2004state}
+Kedron Bardwell and Michael~S Lewis-Beck.
+\newblock State-level forecasts of us senate elections.
+\newblock \emph{PS: Political Science \& Politics}, 37\penalty0 (4):\penalty0 821--826, 2004.
+
+\bibitem[Borges and Lloyd(2016)]{BORGES2016104}
+André Borges and Ryan Lloyd.
+\newblock {Presidential coattails and electoral coordination in multilevel elections: Comparative lessons from {Brazil}}.
+\newblock \emph{Electoral Studies}, 43:\penalty0 104--114, 2016.
+\newblock \doi{https://doi.org/10.1016/j.electstud.2016.05.009}.
+\newblock URL \url{https://www.sciencedirect.com/science/article/pii/S0261379416302104}.
+
+\bibitem[Br{\"{a}}uninger et~al.(2020)Br{\"{a}}uninger, Debus, M{\"{u}}ller, and Stecker]{Brauninger2020}
+Thomas Br{\"{a}}uninger, Marc Debus, Jochen M{\"{u}}ller, and Christian Stecker.
+\newblock \emph{{Parteienwettbewerb in den deutschen Bundesl{\"{a}}ndern}}.
+\newblock Springer VS, Wiesbaden, 2020.
+\newblock ISBN 978-3-658-29221-8.
+\newblock \doi{10.1007/978-3-658-29222-5}.
+
+\bibitem[Campbell et~al.(1960)Campbell, Converse, Miller, and Stokes]{campbell_impact_1960}
+Angus Campbell, Philip~E. Converse, Warren Miller, and Donald~E. Stokes.
+\newblock {The {Impact} of {Party} {Identification}. {Chapter} 6}.
+\newblock In \emph{The {American} {Voter}}, pages 120--145. Wiley, New York, 1960.
+
+\bibitem[Carpenter et~al.(2017)Carpenter, Gelman, Hoffman, Lee, Goodrich, Betancourt, Brubaker, Guo, Li, and Riddell]{carpenter2017stan}
+Bob Carpenter, Andrew Gelman, Matthew~D Hoffman, Daniel Lee, Ben Goodrich, Michael Betancourt, Marcus Brubaker, Jiqiang Guo, Peter Li, and Allen Riddell.
+\newblock {Stan: A probabilistic programming language}.
+\newblock \emph{Journal of Statistical Software}, 76\penalty0 (1):\penalty0 1--32, 2017.
+
+\bibitem[Chen et~al.(2023{\natexlab{a}})Chen, Garnett, and Montgomery]{Chen2023polls}
+Yehu Chen, Roman Garnett, and Jacob~M Montgomery.
+\newblock Polls, context, and time: a dynamic hierarchical bayesian forecasting model for us senate elections.
+\newblock \emph{Political Analysis}, 31\penalty0 (1):\penalty0 113--133, 2023{\natexlab{a}}.
+
+\bibitem[Chen et~al.(2023{\natexlab{b}})Chen, Garnett, and Montgomery]{Chen_Garnett_Montgomery_2023}
+Yehu Chen, Roman Garnett, and Jacob~M. Montgomery.
+\newblock {Polls, Context, and Time: A Dynamic Hierarchical Bayesian Forecasting Model for US Senate Elections}.
+\newblock \emph{Political Analysis}, 31\penalty0 (1):\penalty0 113–133, 2023{\natexlab{b}}.
+\newblock \doi{10.1017/pan.2021.42}.
+
+\bibitem[Converse(1966)]{Converse1966}
+Philip~E. Converse.
+\newblock The concept of normal vote.
+\newblock In Angus Campbell, Philip~E. Converse, Warren~E. Miller, and Donald~E. Stokes, editors, \emph{Elections and the Political Order}, pages 9--39. Wiley, New York, 1966.
+
+\bibitem[Cox(1997)]{cox1997making}
+Gary~W Cox.
+\newblock \emph{{Making votes count: strategic coordination in the world’s electoral systems}}.
+\newblock Cambridge University Press, 1997.
+
+\bibitem[{Dawum}(2024)]{dawum_state_polls}
+{Dawum}.
+\newblock {Dawum.de State Election Polls}.
+\newblock \url{https://www.dawum.de}, 2024.
+\newblock Accessed: 2024-09-05.
+
+\bibitem[Eggers and Spirling(2017)]{eggers_incumbency_2017}
+Andrew~C. Eggers and Arthur Spirling.
+\newblock {Incumbency Effects and the Strength of Party Preferences: Evidence from Multiparty Elections in the United Kingdom}.
+\newblock \emph{The Journal of Politics}, 79\penalty0 (3):\penalty0 903--920, 2017.
+\newblock \doi{10.1086/690617}.
+\newblock URL \url{https://doi.org/10.1086/690617}.
+
+\bibitem[Enns et~al.(2024)Enns, Colner, Kumar, and Lagodny]{enns2024understanding}
+Peter~K Enns, Jonathan Colner, Anusha Kumar, and Julius Lagodny.
+\newblock Understanding biden’s exit and the 2024 election: The state presidential approval/state economy model.
+\newblock \emph{PS: Political Science \& Politics}, pages 1--8, 2024.
+
+\bibitem[Erikson et~al.(2015)Erikson, Folke, and Snyder~Jr]{erikson2015gubernatorial}
+Robert~S Erikson, Olle Folke, and James~M Snyder~Jr.
+\newblock {A gubernatorial helping hand? How governors affect presidential elections}.
+\newblock \emph{The Journal of Politics}, 77\penalty0 (2):\penalty0 491--504, 2015.
+
+\bibitem[Goodrich et~al.(2020)Goodrich, Gabry, Ali, and Brilleman]{rstanarm}
+Ben Goodrich, Jonah Gabry, Imad Ali, and Sam Brilleman.
+\newblock \emph{{rstanarm: Bayesian applied regression modeling via Stan}}, 2020.
+\newblock URL \url{https://mc-stan.org/rstanarm/}.
+\newblock R package version 2.21.1.
+
+\bibitem[Hanretty(2021)]{hanretty2021forecasting}
+Chris Hanretty.
+\newblock {Forecasting multiparty by-elections using Dirichlet regression}.
+\newblock \emph{International Journal of Forecasting}, 37\penalty0 (4):\penalty0 1666--1676, 2021.
+
+\bibitem[Harsgor et~al.(2023)Harsgor, Itzkovitch-Malka, and Tuttnauer]{Harsgor2023}
+Liran Harsgor, Reut Itzkovitch-Malka, and Or~Tuttnauer.
+\newblock {Do coalition and formateur expectations affect vote switching?}
+\newblock \emph{European Political Science Review}, 15\penalty0 (1):\penalty0 96--115, 2023.
+\newblock \doi{10.1017/S1755773922000455}.
+
+\bibitem[Hummel and Rothschild(2014)]{hummel2014fundamental}
+Patrick Hummel and David Rothschild.
+\newblock {Fundamental models for forecasting elections at the state level}.
+\newblock \emph{Electoral Studies}, 35:\penalty0 123--139, 2014.
+
+\bibitem[Jackman(2005)]{jackman2005pooling}
+Simon Jackman.
+\newblock {Pooling the polls over an election campaign}.
+\newblock \emph{Australian Journal of Political Science}, 40\penalty0 (4):\penalty0 499--517, 2005.
+
+\bibitem[Jennings and Wlezien(2018)]{jennings2018election}
+Will Jennings and Christopher Wlezien.
+\newblock {Election polling errors across time and space}.
+\newblock \emph{Nature Human Behaviour}, 2\penalty0 (4):\penalty0 276--283, 2018.
+
+\bibitem[Kang and Oh(2024)]{Kang2024forecasting}
+Seungwoo Kang and Hee-Seok Oh.
+\newblock Forecasting south korea’s presidential election via multiparty dynamic bayesian modeling.
+\newblock \emph{International Journal of Forecasting}, 40\penalty0 (1):\penalty0 124--141, 2024.
+
+\bibitem[Kayser and Leininger(2017)]{kayser2017lander}
+Mark~A Kayser and Arndt Leininger.
+\newblock {A L{\"a}nder-based forecast of the 2017 {German} {Bundestag} election}.
+\newblock \emph{PS: Political Science \& Politics}, 50\penalty0 (3):\penalty0 689--692, 2017.
+
+\bibitem[Kedar(2006)]{Kedar2006a}
+Orit Kedar.
+\newblock {How voters work around institutions: Policy balancing in staggered elections}.
+\newblock \emph{Electoral Studies}, 25\penalty0 (3):\penalty0 509--527, sep 2006.
+\newblock \doi{10.1016/j.electstud.2005.06.011}.
+
+\bibitem[Klarner(2010)]{klarner2010forecasting}
+Carl Klarner.
+\newblock Forecasting the 2010 state legislative elections.
+\newblock \emph{PS: Political Science \& Politics}, 43\penalty0 (4):\penalty0 643--648, 2010.
+
+\bibitem[Klarner(2018)]{klarner20182018}
+Carl~E Klarner.
+\newblock 2018 state legislative election forecasts.
+\newblock \emph{PS: Political Science \& Politics}, 51\penalty0 (S1):\penalty0 21--27, 2018.
+
+\bibitem[Lauderdale et~al.(2020)Lauderdale, Bailey, Blumenau, and Rivers]{LAUDERDALE2020399}
+Benjamin~E. Lauderdale, Delia Bailey, Jack Blumenau, and Douglas Rivers.
+\newblock {Model-based pre-election polling for national and sub-national outcomes in the US and UK}.
+\newblock \emph{International Journal of Forecasting}, 36\penalty0 (2):\penalty0 399--413, 2020.
+\newblock \doi{https://doi.org/10.1016/j.ijforecast.2019.05.012}.
+\newblock URL \url{https://www.sciencedirect.com/science/article/pii/S016920701930189X}.
+
+\bibitem[Lewis-Beck(2005)]{lewis2005election}
+Michael~S Lewis-Beck.
+\newblock {Election forecasting: Principles and practice}.
+\newblock \emph{The British Journal of Politics and International Relations}, 7\penalty0 (2):\penalty0 145--164, 2005.
+
+\bibitem[Lewis-Beck and Dassonneville(2015{\natexlab{a}})]{Lewis-Beck_Dassonneville_2015}
+Michael~S. Lewis-Beck and Ruth Dassonneville.
+\newblock Comparative election forecasting: Further insights from synthetic models.
+\newblock \emph{Electoral Studies}, 39:\penalty0 275--283, 2015{\natexlab{a}}.
+\newblock \doi{10.1016/j.electstud.2015.06.008}.
+
+\bibitem[Lewis-Beck and Dassonneville(2015{\natexlab{b}})]{lewis2015forecasting}
+Michael~S Lewis-Beck and Ruth Dassonneville.
+\newblock {Forecasting elections in Europe: Synthetic models}.
+\newblock \emph{Research \& Politics}, 2\penalty0 (1):\penalty0 2053168014565128, 2015{\natexlab{b}}.
+
+\bibitem[Lewis-Beck et~al.(2016)Lewis-Beck, Nadeau, and Bélanger]{Lewis-Beck_Nadeau_Belanger_2016}
+Michael~S. Lewis-Beck, Richard Nadeau, and Eric Bélanger.
+\newblock The british general election: Synthetic forecasts.
+\newblock \emph{Electoral Studies}, 41:\penalty0 264--268, 2016.
+\newblock \doi{10.1016/j.electstud.2015.11.007}.
+
+\bibitem[Linzer(2013)]{linzer2013dynamic}
+Drew~A Linzer.
+\newblock Dynamic bayesian forecasting of presidential elections in the states.
+\newblock \emph{Journal of the American Statistical Association}, 108\penalty0 (501):\penalty0 124--134, 2013.
+
+\bibitem[Meffert and Gschwend(2010)]{Meffert2010}
+Michael~F. Meffert and Thomas Gschwend.
+\newblock {Strategic coalition voting: Evidence from Austria}.
+\newblock \emph{Electoral Studies}, 29\penalty0 (3):\penalty0 339--349, sep 2010.
+\newblock \doi{10.1016/j.electstud.2010.03.005}.
+
+\bibitem[Meredith(2013)]{MEREDITH_2013}
+Marc Meredith.
+\newblock {Exploiting Friends-and-Neighbors to Estimate Coattail Effects}.
+\newblock \emph{American Political Science Review}, 107\penalty0 (4):\penalty0 742–765, 2013.
+\newblock \doi{10.1017/S0003055413000439}.
+
+\bibitem[Mongrain(2021)]{mongrain202110}
+Philippe Mongrain.
+\newblock 10 downing street: who’s next? seemingly unrelated regressions to forecast uk election results.
+\newblock \emph{Journal of Elections, Public Opinion and Parties}, 31\penalty0 (1):\penalty0 22--32, 2021.
+
+\bibitem[Montalvo et~al.(2019)Montalvo, Papaspiliopoulos, and Stumpf-Fétizon]{MONTALVO201952}
+José~G. Montalvo, Omiros Papaspiliopoulos, and Timothée Stumpf-Fétizon.
+\newblock {Bayesian forecasting of electoral outcomes with new parties’ competition}.
+\newblock \emph{European Journal of Political Economy}, 59:\penalty0 52--70, 2019.
+\newblock \doi{https://doi.org/10.1016/j.ejpoleco.2019.01.006}.
+\newblock URL \url{https://www.sciencedirect.com/science/article/pii/S0176268018302398}.
+
+\bibitem[Munzert(2017)]{munzert2017forecasting}
+Simon Munzert.
+\newblock {Forecasting elections at the constituency level: A correction--combination procedure}.
+\newblock \emph{International Journal of Forecasting}, 33\penalty0 (2):\penalty0 467--481, 2017.
+
+\bibitem[Munzert et~al.(2017)Munzert, Stötzer, Gschwend, Neunhoeffer, and Sternberg]{munzert_2017}
+Simon Munzert, Lukas Stötzer, Thomas Gschwend, Marcel Neunhoeffer, and Sebastian Sternberg.
+\newblock {Zweitstimme.org. Ein strukturell-dynamisches {Vorhersagemodell} für {Bundestagswahlen}}.
+\newblock \emph{Politische Vierteljahresschrift}, 58\penalty0 (3):\penalty0 418--441, 2017.
+\newblock URL \url{http://www.jstor.org/stable/26427772}.
+
+\bibitem[Nadeau et~al.(2020)Nadeau, Dassonneville, Lewis-Beck, and Mongrain]{nadeau2020election}
+Richard Nadeau, Ruth Dassonneville, Michael~S Lewis-Beck, and Philippe Mongrain.
+\newblock {Are election results more unpredictable? A forecasting test}.
+\newblock \emph{Political Science Research and Methods}, 8\penalty0 (4):\penalty0 764--771, 2020.
+
+\bibitem[Neunhoeffer et~al.(2020)Neunhoeffer, Gschwend, Munzert, and Stoetzer]{neunhoeffer2020ansatz}
+Marcel Neunhoeffer, Thomas Gschwend, Simon Munzert, and Lukas~F Stoetzer.
+\newblock {Ein Ansatz zur {Vorhersage} der {Erststimmenanteile} bei {Bundestagswahlen}}.
+\newblock \emph{Politische Vierteljahresschrift}, 61\penalty0 (1):\penalty0 111--130, 2020.
+
+\bibitem[Petris(2010)]{petris2010dlm}
+Giovanni Petris.
+\newblock {An R package for dynamic linear models}.
+\newblock \emph{Journal of Statistical Software}, 36\penalty0 (12):\penalty0 1--16, 2010.
+\newblock URL \url{http://www.jstatsoft.org/v36/i12/}.
+
+\bibitem[Shirani-Mehr et~al.(2018)Shirani-Mehr, Rothschild, Goel, and Gelman]{shirani2018disentangling}
+Houshmand Shirani-Mehr, David Rothschild, Sharad Goel, and Andrew Gelman.
+\newblock {Disentangling bias and variance in election polls}.
+\newblock \emph{Journal of the American Statistical Association}, 113\penalty0 (522):\penalty0 607--614, 2018.
+
+\bibitem[Singh et~al.(2012)Singh, Karako{\c{c}}, and Blais]{singh2012differentiating}
+Shane Singh, Ekrem Karako{\c{c}}, and Andr{\'e} Blais.
+\newblock {Differentiating winners: How elections affect satisfaction with democracy}.
+\newblock \emph{Electoral Studies}, 31\penalty0 (1):\penalty0 201--211, 2012.
+
+\bibitem[Stegmaier(2022)]{stegmaier2022forecasting}
+Mary Stegmaier.
+\newblock {Forecasting German Elections}.
+\newblock \emph{PS: Political Science \& Politics}, 55\penalty0 (1):\penalty0 64--68, 2022.
+
+\bibitem[Stegmaier et~al.(2023)Stegmaier, Jokinsky, and Lewis-Beck]{stegmaier2023evolution}
+Mary Stegmaier, Steven Jokinsky, and Michael~S Lewis-Beck.
+\newblock {The evolution of election forecasting models in the UK}.
+\newblock \emph{Electoral Studies}, 86:\penalty0 102694, 2023.
+
+\bibitem[Stoetzer and Orlowski(2020)]{stoetzer2020estimating}
+Lukas~F Stoetzer and Matthias Orlowski.
+\newblock {Estimating coalition majorities during political campaigns based on pre-election polls}.
+\newblock \emph{Journal of Elections, Public Opinion and Parties}, 30\penalty0 (1):\penalty0 126--137, 2020.
+
+\bibitem[Stoetzer et~al.(2019)Stoetzer, Neunhoeffer, Gschwend, Munzert, and Sternberg]{Stoetzer_Neunhoeffer_Gschwend_Munzert_Sternberg_2019}
+Lukas~F. Stoetzer, Marcel Neunhoeffer, Thomas Gschwend, Simon Munzert, and Sebastian Sternberg.
+\newblock {Forecasting Elections in Multiparty Systems: A Bayesian Approach Combining Polls and Fundamentals}.
+\newblock \emph{Political Analysis}, 27\penalty0 (2):\penalty0 255–262, 2019.
+\newblock \doi{10.1017/pan.2018.49}.
+
+\bibitem[Uppal(2011)]{uppal2011does}
+Yogesh Uppal.
+\newblock {Does legislative turnover adversely affect state expenditure policy? Evidence from Indian state elections}.
+\newblock \emph{Public Choice}, 147:\penalty0 189--207, 2011.
+
+\bibitem[Valentim(2021)]{valentim_right_2021}
+Vicente Valentim.
+\newblock {Parliamentary Representation and the Normalization of Radical Right Support}.
+\newblock \emph{Comparative Political Studies}, 54\penalty0 (14):\penalty0 2475--2511, 2021.
+
+\bibitem[{Wahlrecht}(2024)]{wahlrecht_state_polls}
+{Wahlrecht}.
+\newblock {Wahlrecht.de State Election Polls}.
+\newblock \url{https://www.wahlrecht.de/umfragen/landtage}, 2024.
+\newblock Accessed: 2024-09-05.
+
+\bibitem[Walther(2015)]{walther2015picking}
+Daniel Walther.
+\newblock {Picking the winner (s): Forecasting elections in multiparty systems}.
+\newblock \emph{Electoral Studies}, 40:\penalty0 1--13, 2015.
+
+\bibitem[West and Harrison(1997)]{west1997}
+Mike West and Jeff Harrison.
+\newblock \emph{{Bayesian Forecasting and Dynamic Models}}.
+\newblock Springer, New York, 2nd edition, 1997.
+
+\end{thebibliography}
